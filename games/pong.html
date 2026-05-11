@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>PONG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.5rem;
+      color: #00e5ff;
+      text-decoration: none;
+      background: rgba(0,229,255,0.1);
+      border: 1px solid #00e5ff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      z-index: 200;
+    }
+    .back-btn:hover { background: rgba(0,229,255,0.25); }
+
+    h1 {
+      font-size: clamp(1rem, 4vw, 1.6rem);
+      color: #ff6b35;
+      text-shadow: 0 0 10px #ff6b35, 0 0 20px #ff6b35;
+      margin: 70px 0 16px;
+      letter-spacing: 0.2em;
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 16px;
+      font-size: clamp(1rem, 4vw, 1.8rem);
+      align-items: center;
+    }
+
+    .score-player { color: #00e5ff; text-shadow: 0 0 10px #00e5ff; }
+    .score-cpu { color: #ff6b35; text-shadow: 0 0 10px #ff6b35; }
+    .score-divider { color: #555; font-size: 0.6em; }
+
+    .labels {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 8px;
+      font-size: 0.4rem;
+    }
+    .label-p { color: #00e5ff; flex: 1; text-align: center; }
+    .label-c { color: #ff6b35; flex: 1; text-align: center; }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      height: auto;
+      border: 2px solid #ff6b35;
+      box-shadow: 0 0 20px #ff6b3540, 0 0 40px #ff6b3520;
+      background: #050505;
+      image-rendering: pixelated;
+      touch-action: none;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .overlay h2 {
+      font-size: clamp(0.8rem, 3vw, 1.2rem);
+      text-align: center;
+      color: #ff6b35;
+      text-shadow: 0 0 10px #ff6b35;
+    }
+
+    .overlay p {
+      font-size: 0.4rem;
+      color: #aaa;
+      text-align: center;
+      line-height: 2.2;
+    }
+
+    .btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.6rem;
+      color: #0a0a0a;
+      background: #ff6b35;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 0 20px #ff6b35; }
+
+    .hint {
+      font-size: 0.38rem;
+      color: #555;
+      margin-top: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="../index.html">&#8592; BACK</a>
+  <h1>PONG</h1>
+
+  <div class="labels" style="width:100%;max-width:400px;padding:0 2px;">
+    <span class="label-p">YOU</span>
+    <span class="label-c">CPU</span>
+  </div>
+
+  <div class="scoreboard">
+    <span class="score-player" id="sp">0</span>
+    <span class="score-divider">:</span>
+    <span class="score-cpu" id="sc">0</span>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="c" width="400" height="500"></canvas>
+    <div class="overlay" id="overlay">
+      <h2>PONG</h2>
+      <p>MOVE YOUR MOUSE or<br>DRAG on canvas<br>to control the LEFT PADDLE<br><br>FIRST TO 7 WINS!</p>
+      <button class="btn" id="startBtn">START GAME</button>
+    </div>
+  </div>
+
+  <p class="hint">MOUSE / TOUCH to move paddle</p>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const spEl = document.getElementById('sp');
+    const scEl = document.getElementById('sc');
+
+    const W = canvas.width, H = canvas.height;
+    const PADDLE_W = 12, PADDLE_H = 70;
+    const BALL_R = 8;
+    const WIN_SCORE = 7;
+    const CPU_SPEED = 3.5;
+
+    let playerY, cpuY, ball, scoreP, scoreC, running, animId;
+    let targetY = H / 2;
+
+    function initBall(dir = 1) {
+      const angle = (Math.random() * 0.6 - 0.3);
+      ball = {
+        x: W / 2,
+        y: H / 2,
+        vx: dir * 4 * Math.cos(angle),
+        vy: 4 * Math.sin(angle),
+        speed: 4,
+      };
+    }
+
+    function init() {
+      playerY = H / 2 - PADDLE_H / 2;
+      cpuY = H / 2 - PADDLE_H / 2;
+      scoreP = 0; scoreC = 0;
+      spEl.textContent = '0';
+      scEl.textContent = '0';
+      initBall(Math.random() > 0.5 ? 1 : -1);
+    }
+
+    function drawDashedLine() {
+      ctx.setLineDash([8, 8]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(W / 2, 0);
+      ctx.lineTo(W / 2, H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawPaddle(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.roundRect(x, y, PADDLE_W, PADDLE_H, 4);
+      ctx.fill();
+      // Shine
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(x + 2, y + 4, PADDLE_W - 4, 8);
+      ctx.shadowBlur = 0;
+    }
+
+    function drawBall() {
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function draw() {
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, W, H);
+      drawDashedLine();
+      drawPaddle(10, playerY, '#00e5ff');
+      drawPaddle(W - 10 - PADDLE_W, cpuY, '#ff6b35');
+      drawBall();
+    }
+
+    function update() {
+      // Move ball
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Top/bottom walls
+      if (ball.y - BALL_R <= 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+      if (ball.y + BALL_R >= H) { ball.y = H - BALL_R; ball.vy = -Math.abs(ball.vy); }
+
+      // Player paddle collision
+      const pLeft = 10, pRight = 10 + PADDLE_W;
+      if (
+        ball.x - BALL_R <= pRight &&
+        ball.x - BALL_R >= pLeft - 2 &&
+        ball.y >= playerY - BALL_R &&
+        ball.y <= playerY + PADDLE_H + BALL_R &&
+        ball.vx < 0
+      ) {
+        const hitPos = (ball.y - playerY) / PADDLE_H;
+        const angle = (hitPos - 0.5) * 1.2;
+        ball.speed = Math.min(ball.speed + 0.3, 12);
+        ball.vx = ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+        ball.x = pRight + BALL_R;
+      }
+
+      // CPU paddle collision
+      const cLeft = W - 10 - PADDLE_W, cRight = W - 10;
+      if (
+        ball.x + BALL_R >= cLeft &&
+        ball.x + BALL_R <= cRight + 2 &&
+        ball.y >= cpuY - BALL_R &&
+        ball.y <= cpuY + PADDLE_H + BALL_R &&
+        ball.vx > 0
+      ) {
+        const hitPos = (ball.y - cpuY) / PADDLE_H;
+        const angle = (hitPos - 0.5) * 1.2;
+        ball.speed = Math.min(ball.speed + 0.3, 12);
+        ball.vx = -ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+        ball.x = cLeft - BALL_R;
+      }
+
+      // Scoring
+      if (ball.x + BALL_R < 0) {
+        scoreC++;
+        scEl.textContent = scoreC;
+        if (scoreC >= WIN_SCORE) { endGame('CPU WINS!'); return; }
+        initBall(-1);
+      }
+      if (ball.x - BALL_R > W) {
+        scoreP++;
+        spEl.textContent = scoreP;
+        if (scoreP >= WIN_SCORE) { endGame('YOU WIN!'); return; }
+        initBall(1);
+      }
+
+      // CPU AI: follow ball with delay + imperfection
+      const cpuCenter = cpuY + PADDLE_H / 2;
+      const diff = ball.y - cpuCenter;
+      const clampedDiff = Math.min(Math.abs(diff), CPU_SPEED) * Math.sign(diff);
+      cpuY += clampedDiff * (ball.vx > 0 ? 1 : 0.5);
+      cpuY = Math.max(0, Math.min(H - PADDLE_H, cpuY));
+
+      // Player paddle clamp
+      playerY = Math.max(0, Math.min(H - PADDLE_H, targetY - PADDLE_H / 2));
+    }
+
+    function loop() {
+      if (!running) return;
+      update();
+      draw();
+      animId = requestAnimationFrame(loop);
+    }
+
+    function startGame() {
+      init();
+      overlay.style.display = 'none';
+      running = true;
+      cancelAnimationFrame(animId);
+      animId = requestAnimationFrame(loop);
+    }
+
+    function endGame(msg) {
+      running = false;
+      cancelAnimationFrame(animId);
+      const winnerColor = msg.includes('YOU') ? '#00e5ff' : '#ff6b35';
+      overlay.innerHTML = `
+        <h2 style="color:${winnerColor}">${msg}</h2>
+        <p style="color:#aaa;font-size:0.45rem">YOU ${scoreP} - ${scoreC} CPU</p>
+        <button class="btn" onclick="startGame()">PLAY AGAIN</button>
+      `;
+      overlay.style.display = 'flex';
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+
+    // Mouse control
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleY = H / rect.height;
+      targetY = (e.clientY - rect.top) * scaleY;
+    });
+
+    // Touch control
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const scaleY = H / rect.height;
+      targetY = (e.touches[0].clientY - rect.top) * scaleY;
+    }, { passive: false });
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const scaleY = H / rect.height;
+      targetY = (e.touches[0].clientY - rect.top) * scaleY;
+    }, { passive: false });
+
+    // Draw initial frame
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, W, H);
+  </script>
+</body>
+</html>

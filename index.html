@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ARCADE HUB</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Press Start 2P', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridMove 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes gridMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 40px 40px; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 48px 0 40px;
+    }
+
+    .title {
+      font-size: clamp(1.6rem, 6vw, 3.5rem);
+      letter-spacing: 0.1em;
+      color: #ffffff;
+      text-shadow:
+        0 0 10px #00e5ff,
+        0 0 20px #00e5ff,
+        0 0 40px #00e5ff,
+        0 0 80px #00e5ff;
+      animation: titlePulse 3s ease-in-out infinite;
+    }
+
+    @keyframes titlePulse {
+      0%, 100% { text-shadow: 0 0 10px #00e5ff, 0 0 20px #00e5ff, 0 0 40px #00e5ff, 0 0 80px #00e5ff; }
+      50% { text-shadow: 0 0 20px #00e5ff, 0 0 40px #00e5ff, 0 0 80px #00e5ff, 0 0 120px #00e5ff, 0 0 200px #00e5ff; }
+    }
+
+    .subtitle {
+      margin-top: 16px;
+      font-size: clamp(0.4rem, 1.8vw, 0.65rem);
+      color: #00ff88;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 56px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: clamp(0.55rem, 2vw, 0.85rem);
+      letter-spacing: 0.15em;
+      white-space: nowrap;
+    }
+
+    .section-line {
+      flex: 1;
+      height: 2px;
+      border-radius: 2px;
+    }
+
+    /* Category colors */
+    .arcade .section-title { color: #ff6b35; }
+    .arcade .section-line { background: linear-gradient(90deg, #ff6b35, transparent); }
+
+    .puzzle .section-title { color: #00ff88; }
+    .puzzle .section-line { background: linear-gradient(90deg, #00ff88, transparent); }
+
+    .cardboard .section-title { color: #ff3366; }
+    .cardboard .section-line { background: linear-gradient(90deg, #ff3366, transparent); }
+
+    /* Game grid */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .game-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    }
+
+    @media (min-width: 900px) {
+      .game-grid { grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    }
+
+    /* Game cards */
+    .game-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      padding: 2px;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      transition: opacity 0.2s;
+      opacity: 0.5;
+    }
+
+    .arcade .game-card::before { background: linear-gradient(135deg, #ff6b35, #ff6b3555); }
+    .puzzle .game-card::before { background: linear-gradient(135deg, #00ff88, #00ff8855); }
+    .cardboard .game-card::before { background: linear-gradient(135deg, #ff3366, #ff336655); }
+
+    .game-card:hover, .game-card:active {
+      transform: translateY(-4px) scale(1.02);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .arcade .game-card:hover::before { opacity: 1; box-shadow: 0 0 20px #ff6b3566; }
+    .puzzle .game-card:hover::before { opacity: 1; }
+    .cardboard .game-card:hover::before { opacity: 1; }
+
+    .arcade .game-card:hover {
+      box-shadow: 0 0 20px #ff6b3540, 0 0 40px #ff6b3520, inset 0 0 20px #ff6b350a;
+    }
+    .puzzle .game-card:hover {
+      box-shadow: 0 0 20px #00ff8840, 0 0 40px #00ff8820, inset 0 0 20px #00ff880a;
+    }
+    .cardboard .game-card:hover {
+      box-shadow: 0 0 20px #ff336640, 0 0 40px #ff336620, inset 0 0 20px #ff33660a;
+    }
+
+    .game-card .icon {
+      font-size: clamp(2rem, 6vw, 2.8rem);
+      line-height: 1;
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+    }
+
+    .game-card .name {
+      font-size: clamp(0.38rem, 1.4vw, 0.6rem);
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.05em;
+    }
+
+    .arcade .game-card .name { color: #ff6b35; }
+    .puzzle .game-card .name { color: #00ff88; }
+    .cardboard .game-card .name { color: #ff3366; }
+
+    /* Shimmer effect on cards */
+    .game-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        45deg,
+        transparent 40%,
+        rgba(255,255,255,0.04) 50%,
+        transparent 60%
+      );
+      transform: translateX(-100%);
+      transition: transform 0s;
+    }
+
+    .game-card:hover::after {
+      transform: translateX(100%);
+      transition: transform 0.5s ease;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 24px 0;
+      font-size: 0.4rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.2em;
+      position: relative;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="title">ARCADE HUB</h1>
+      <p class="subtitle">INSERT COIN TO PLAY</p>
+    </header>
+
+    <!-- Arcade Games -->
+    <section class="section arcade">
+      <div class="section-header">
+        <h2 class="section-title">&#9658; ARCADE GAMES</h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="game-grid">
+        <a class="game-card" href="games/snake.html">
+          <span class="icon">🐍</span>
+          <span class="name">SNAKE</span>
+        </a>
+        <a class="game-card" href="games/tetris.html">
+          <span class="icon">🟦</span>
+          <span class="name">TETRIS</span>
+        </a>
+        <a class="game-card" href="games/pong.html">
+          <span class="icon">🏓</span>
+          <span class="name">PONG</span>
+        </a>
+        <a class="game-card" href="games/breakout.html">
+          <span class="icon">🧱</span>
+          <span class="name">BREAKOUT</span>
+        </a>
+        <a class="game-card" href="games/flappy-bird.html">
+          <span class="icon">🐦</span>
+          <span class="name">FLAPPY BIRD</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Puzzle Games -->
+    <section class="section puzzle">
+      <div class="section-header">
+        <h2 class="section-title">&#9658; PUZZLE GAMES</h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="game-grid">
+        <a class="game-card" href="games/wordle.html">
+          <span class="icon">📝</span>
+          <span class="name">WORDLE</span>
+        </a>
+        <a class="game-card" href="games/sliding-puzzle.html">
+          <span class="icon">🔢</span>
+          <span class="name">SLIDING PUZZLE</span>
+        </a>
+        <a class="game-card" href="games/sudoku.html">
+          <span class="icon">🔣</span>
+          <span class="name">SUDOKU</span>
+        </a>
+        <a class="game-card" href="games/match3.html">
+          <span class="icon">💎</span>
+          <span class="name">MATCH 3</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Card & Board Games -->
+    <section class="section cardboard">
+      <div class="section-header">
+        <h2 class="section-title">&#9658; CARD &amp; BOARD</h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="game-grid">
+        <a class="game-card" href="games/memory-flip.html">
+          <span class="icon">🃏</span>
+          <span class="name">MEMORY FLIP</span>
+        </a>
+        <a class="game-card" href="games/solitaire.html">
+          <span class="icon">♠️</span>
+          <span class="name">SOLITAIRE</span>
+        </a>
+        <a class="game-card" href="games/chess.html">
+          <span class="icon">♟️</span>
+          <span class="name">CHESS</span>
+        </a>
+        <a class="game-card" href="games/minesweeper.html">
+          <span class="icon">💣</span>
+          <span class="name">MINESWEEPER</span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    &copy; 2026 ARCADE HUB &mdash; ALL RIGHTS RESERVED
+  </footer>
+</body>
+</html>
